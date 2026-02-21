@@ -1,8 +1,8 @@
 export interface Dog {
   id: string
   name: string
-  photo_url: string
-  story: string
+  photo_url: string | null
+  story: string | null
   monthly_amount_usd: number
   monthly_amount_idr: number
   is_sponsored: boolean
@@ -13,7 +13,7 @@ export interface Dog {
 export interface DogUpdate {
   id: string
   dog_id: string
-  photo_url: string
+  photo_url: string | null
   caption: string
   posted_by: string
   created_at: string
@@ -40,5 +40,6 @@ export interface User {
   is_monthly_sponsor: boolean
   total_donated: number
   stripe_customer_id: string | null
+  role: 'donor' | 'admin'
   created_at: string
 }

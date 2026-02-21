@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { dogs } from '../data/dogs'
+import { fetchDogs } from '../lib/queries'
 import type { Dog } from '../types'
 import { nameToGradient } from '../utils/nameToGradient'
 
@@ -14,13 +14,30 @@ const filters: { key: Filter; label: string }[] = [
 
 export default function Dogs() {
   const [activeFilter, setActiveFilter] = useState<Filter>('all')
+  const [dogs, setDogs] = useState<Dog[]>([])
+  const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
+
+  useEffect(() => {
+    fetchDogs()
+      .then(setDogs)
+      .catch(console.error)
+      .finally(() => setLoading(false))
+  }, [])
 
   const filteredDogs: Dog[] = dogs.filter((dog) => {
     if (activeFilter === 'needs_sponsor') return !dog.is_sponsored
     if (activeFilter === 'sponsored') return dog.is_sponsored
     return true
   })
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <div className="w-8 h-8 border-2 border-electric border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-black">

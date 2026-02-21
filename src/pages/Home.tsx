@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import StatPill from '../components/StatPill'
 import DogCard from '../components/DogCard'
 import CurrencyToggle from '../components/CurrencyToggle'
-import { stats } from '../data/stats'
-import { dogs } from '../data/dogs'
+import { fetchDogs, fetchDogStats } from '../lib/queries'
+import type { Dog } from '../types'
 
 const AMOUNTS_USD = [10, 25, 50, 100] as const
 const AMOUNTS_IDR = [150_000, 400_000, 750_000, 1_500_000] as const
@@ -21,13 +21,34 @@ function formatAmount(amount: number, currency: 'USD' | 'IDR'): string {
 export default function Home() {
   const [selectedAmount, setSelectedAmount] = useState<number>(25)
   const [currency, setCurrency] = useState<'USD' | 'IDR'>('USD')
+  const [dogs, setDogs] = useState<Dog[]>([])
+  const [stats, setStats] = useState({ dogsRescued: 0, activeSponsors: 0, totalRaised: 0 })
+  const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
+
+  useEffect(() => {
+    Promise.all([fetchDogs(), fetchDogStats()])
+      .then(([dogsData, statsData]) => {
+        setDogs(dogsData)
+        setStats(statsData)
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false))
+  }, [])
 
   const unsponsoredDogs = dogs.filter((d) => !d.is_sponsored)
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <div className="w-8 h-8 border-2 border-electric border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
   return (
     <div className="pt-4 pb-8">
-      {/* ── Header ── */}
+      {/* Header */}
       <header className="flex items-center justify-between px-6 mb-6">
         <h1 className="text-xl font-black tracking-tight">
           <span className="text-white">bali</span>
@@ -75,10 +96,9 @@ export default function Home() {
         </div>
       </header>
 
-      {/* ── Hero Card ── */}
+      {/* Hero Card */}
       <Link to="/dogs" className="block mx-6 mb-5">
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-electric to-[#FFE566] p-[32px_28px]">
-          {/* Decorative circle */}
           <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/10 pointer-events-none" />
 
           <span className="block text-[11px] font-bold uppercase tracking-widest text-black/80 mb-3">
@@ -92,7 +112,7 @@ export default function Home() {
           </h2>
 
           <p className="text-sm text-black/85 mb-6 max-w-[260px]">
-            32 dogs are waiting for a monthly sponsor. Will you be the one?
+            {unsponsoredDogs.length} dogs are waiting for a monthly sponsor. Will you be the one?
           </p>
 
           <span className="inline-flex items-center gap-2 bg-black text-white px-6 py-3.5 rounded-[14px] font-bold text-sm">
@@ -104,18 +124,18 @@ export default function Home() {
         </div>
       </Link>
 
-      {/* ── Stats Row ── */}
+      {/* Stats Row */}
       <div className="grid grid-cols-3 gap-2 px-6 mb-8">
         <StatPill number={String(stats.dogsRescued)} label="RESCUED" color="green" />
         <StatPill number={String(stats.activeSponsors)} label="SPONSORS" color="orange" />
         <StatPill
-          number={`$${Math.round(stats.totalRaised / 1000)}K`}
+          number={stats.totalRaised > 0 ? `$${Math.round(stats.totalRaised / 1000)}K` : '$0'}
           label="RAISED"
           color="yellow"
         />
       </div>
 
-      {/* ── Dogs Section ── */}
+      {/* Dogs Section */}
       <section className="mb-8">
         <div className="flex items-center justify-between px-6 mb-4">
           <h3 className="text-lg font-extrabold text-white">Needs a sponsor</h3>
@@ -133,7 +153,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Quick Donate ── */}
+      {/* Quick Donate */}
       <section className="mx-6">
         <div className="bg-dark border border-charcoal rounded-[20px] p-6">
           <div className="flex items-center justify-between mb-5">

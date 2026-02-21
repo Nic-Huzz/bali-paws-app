@@ -1,6 +1,7 @@
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { dogs } from '../data/dogs'
-import { dogUpdates } from '../data/updates'
+import { fetchDog, fetchDogUpdates } from '../lib/queries'
+import type { Dog, DogUpdate } from '../types'
 import { nameToGradient } from '../utils/nameToGradient'
 
 function formatDate(dateString: string): string {
@@ -15,8 +16,28 @@ function formatDate(dateString: string): string {
 export default function DogDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const [dog, setDog] = useState<Dog | null>(null)
+  const [updates, setUpdates] = useState<DogUpdate[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const dog = dogs.find((d) => d.id === id)
+  useEffect(() => {
+    if (!id) return
+    Promise.all([fetchDog(id), fetchDogUpdates(id)])
+      .then(([dogData, updatesData]) => {
+        setDog(dogData)
+        setUpdates(updatesData)
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false))
+  }, [id])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <div className="w-8 h-8 border-2 border-electric border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
 
   if (!dog) {
     return (
@@ -31,8 +52,6 @@ export default function DogDetail() {
       </div>
     )
   }
-
-  const updates = dogUpdates.filter((u) => u.dog_id === dog.id)
 
   return (
     <div className="min-h-screen bg-black pb-28">
@@ -113,7 +132,7 @@ export default function DogDetail() {
             </div>
             <div className="text-right">
               <p className="text-2xl font-black text-white">
-                Rp {dog.monthly_amount_idr.toLocaleString()}
+                Rp {Number(dog.monthly_amount_idr).toLocaleString()}
                 <span className="text-sm font-bold text-gray">/mo</span>
               </p>
               <p className="text-xs text-gray mt-0.5">IDR</p>
@@ -138,7 +157,7 @@ export default function DogDetail() {
                     {update.photo_url ? (
                       <img
                         src={update.photo_url}
-                        alt={`Update from ${update.posted_by}`}
+                        alt="Shelter update"
                         className="w-full h-full object-cover"
                       />
                     ) : (
@@ -162,7 +181,7 @@ export default function DogDetail() {
         </div>
       </div>
 
-      {/* Fixed bottom CTA — sits above BottomNav */}
+      {/* Fixed bottom CTA */}
       <div className="fixed bottom-16 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-dark border-t border-charcoal z-40 px-5 py-4">
         {dog.is_sponsored ? (
           <div className="w-full bg-charcoal text-gray font-extrabold text-center rounded-[14px] py-4 text-sm">

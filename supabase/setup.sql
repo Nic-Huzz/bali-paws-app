@@ -2,6 +2,10 @@
 -- Bali Paws Rescue — Database Setup
 -- Paste this entire file into Supabase SQL Editor
 -- (Dashboard > SQL Editor > New Query > Paste > Run)
+--
+-- IMPORTANT: Before running this, go to:
+--   Auth > Settings > disable "Enable email confirmations"
+--   so Ken can sign up and be logged in immediately.
 -- ============================================
 
 -- 1. USERS (extends Supabase auth.users)
@@ -72,14 +76,35 @@ create policy "Users can update own profile"
   on public.profiles for update
   using (auth.uid() = id);
 
--- Dogs: everyone can read, admins can insert/update
+-- Dogs: everyone can read, admins can insert/update/delete
 create policy "Anyone can view dogs"
   on public.dogs for select
   to anon, authenticated
   using (true);
 
-create policy "Admins can manage dogs"
-  on public.dogs for all
+create policy "Admins can insert dogs"
+  on public.dogs for insert
+  to authenticated
+  with check (
+    exists (
+      select 1 from public.profiles
+      where id = auth.uid() and role = 'admin'
+    )
+  );
+
+create policy "Admins can update dogs"
+  on public.dogs for update
+  to authenticated
+  using (
+    exists (
+      select 1 from public.profiles
+      where id = auth.uid() and role = 'admin'
+    )
+  );
+
+create policy "Admins can delete dogs"
+  on public.dogs for delete
+  to authenticated
   using (
     exists (
       select 1 from public.profiles
@@ -106,7 +131,7 @@ create policy "Authenticated users can create donations"
   to authenticated
   with check (auth.uid() = donor_id);
 
--- Dog Updates: everyone can read, admins can create
+-- Dog Updates: everyone can read, admins can insert/delete
 create policy "Anyone can view dog updates"
   on public.dog_updates for select
   to anon, authenticated
@@ -114,6 +139,17 @@ create policy "Anyone can view dog updates"
 
 create policy "Admins can create dog updates"
   on public.dog_updates for insert
+  to authenticated
+  with check (
+    exists (
+      select 1 from public.profiles
+      where id = auth.uid() and role = 'admin'
+    )
+  );
+
+create policy "Admins can delete dog updates"
+  on public.dog_updates for delete
+  to authenticated
   using (
     exists (
       select 1 from public.profiles
@@ -156,4 +192,5 @@ insert into public.dogs (name, photo_url, story, monthly_amount_usd, monthly_amo
 
 -- ============================================
 -- DONE! Your database is ready.
+-- Next: sign up through the app, then run make-admin.sql
 -- ============================================
